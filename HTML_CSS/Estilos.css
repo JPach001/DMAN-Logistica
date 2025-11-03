@@ -1,0 +1,166 @@
+* { box-sizing: border-box; }
+html, body {
+    height: 100%;
+    margin: 0;
+    background-color: #ffffff;
+}
+p, ul{
+    line-height: 1.5;
+}
+h1{
+    color: #000000;
+    font-family: "Oswald";
+    font-weight: 400;
+    font-size: 26px;
+    text-align: left;
+}
+.img_titulo{
+    height: 70px;
+    width: 50px;
+}
+h2{
+    text-align: center;
+    font-family: 'Helvetica';
+}
+a{
+    color: #008E17;
+}
+main{
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    text-align: center;
+}
+.main_servicios div{
+    background-color: rgba(200,226,136,0.46);
+    border-radius: 0%;
+    border: 1px solid #3F4D1C;
+}
+.columna {
+    flex: 1; /* todas ocupan el mismo ancho */
+    background-color: #ffffff;
+    border-radius: 10px;
+    text-align: justify;
+    padding: 5%;
+}
+.site-header {
+    width: 100%;
+}
+.DMANLogistica{
+    width: 100%;
+    height: 70px;
+    background: linear-gradient(to bottom, #D1FE63, #010100);
+    display: grid;
+    grid-template-columns: 70px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 0px 15px 0px 15px;/*18px 15px 18px 28px;*/
+    box-shadow: 0 6px 0 rgba(63,77,28,0.9);
+}
+.DMANLogistica h1 {
+    font-family: "Montserrat Underline", sans-serif;
+    font-weight: 600;
+    font-style: normal;
+    margin: 0;
+    font-size: 32px;
+    color: white;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    padding-top: 18px;
+}
+.secciones{
+    background-color: #010100;
+    color: white;
+    padding: 0px;
+    height: 40px;
+    border: none;
+    /*display: flex;            DESCATIVAR Y ARREGLAR LA BARRA DE BUSQUEDA*/
+}
+.btnIniciarSesion{
+    justify-self: end;
+    background-color: #3F4D1C;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15) inset;
+    font-weight: 600;
+    transition: transform .12s ease, background-color .08s ease;
+}
+.img_inicio{
+    width: 64%;
+    height: 80%;
+    border: 1px solid #3F4D1C;
+}
+.img_servicios{
+    height: auto;
+    width: 100%;
+}
+.img_acerca_nosotros{
+    width: 100%;
+    height: 100%;
+}
+.btnCotizar{
+    height: 100%;
+    padding: 10px 40px;
+    background: #D1FE63;
+    border: 1px solid #3F4D1C;
+    border-radius: 3px;
+    color: #3F4D1C;
+    font-family: "Helvetica";
+    font-weight: 400;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+}
+.btnCotizar:hover{
+    color: #ffffff;
+    background-color: #273011;
+    transform: translateY(-1px);
+}
+.btn{
+    /*
+    padding-left: 50px;
+    padding-right: 50px;
+    */
+    background-color: #010101;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 40px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-family: Helvetica;
+    transition: background-color .12s ease, transform .08s ease;
+}
+.btn-actual{
+    /*
+    padding-left: 50px;
+    padding-right: 50px;
+    */
+    background-color: #ffffff;
+    color: #010100;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0 40px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-family: Helvetica;
+    transition: background-color .12s ease, transform .08s ease;
+}
+.btn:hover, .btnIniciarSesion:hover{
+    background-color: #010100;
+    border: 1px solid #ffffff;
+    transform: translateY(1px);
+}
