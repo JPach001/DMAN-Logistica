@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagrama Entidad-Relación - DMAN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+</head>
+
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Diagrama Entidad-Relación (ERD)</h1>
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex gap-2">
+                <button onclick="descargarSVG()"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow transition duration-200 z-10 relative">
+                    Descargar SVG (Sin pérdida de calidad)
+                </button>
+                <button onclick="descargarPNG()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition duration-200 z-10 relative">
+                    Descargar PNG
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-center border-2 border-gray-200 rounded bg-gray-50 h-[600px] overflow-hidden cursor-grab active:cursor-grabbing relative" id="diagram-container">
+            <pre class="mermaid w-full h-full m-0">
+        erDiagram
+        TIPO_USUARIO {
+            int id_tipo_usuario PK
+            string nombre_rol "Admin, Empleado, Cliente"
+        }
+        
+        DOMICILIO {
+            int id_domicilio PK
+            string calle
+            string numero_exterior
+            string colonia
+            string codigo_postal
+            string ciudad
+            string estado
+        }
+        
+        USUARIOS {
+            int id_usuario PK
+            int id_domicilio FK
+            int id_tipo_usuario FK
+            string nombre
+            string apellidos
+            string correo UK
+            string celular UK
+            string password_hash
+        }
+
+        PERFIL_EMPLEADO {
+            int id_usuario PK, FK
+            string habilidad "Chofer, Cargador, Ambos"
+            string numero_licencia
+            string estado "Activo, Vacaciones, Baja"
+        }
+        
+        CAMIONETAS {
+            int id_camioneta PK
+            string marca
+            string modelo
+            string placa UK
+            decimal capacidad_m3
+            string estado "Disponible, Mantenimiento, Baja"
+        }
+        
+        VIAJES {
+            int id_viaje PK
+            int id_origen FK
+            int id_destino FK
+            datetime fecha_hora_inicio
+            int duracion_estimada_min
+            decimal distancia_km
+            boolean anticipo_pagado
+            string estado "Cotizado, Confirmado, En curso, Terminado, Cancelado"
+            decimal costo_total
+            string descripcion_articulos
+        }
+
+        VIAJE_CAMIONETAS {
+            int id_viaje PK, FK
+            int id_camioneta PK, FK
+        }
+
+        VIAJE_EMPLEADOS {
+            int id_viaje PK, FK
+            int id_empleado PK, FK
+            string rol_en_este_viaje "Chofer, Auxiliar"
+        }
+        
+        PAGOS {
+            int id_pago PK
+            int id_viaje FK
+            decimal monto
+            string metodo_pago "Efectivo, Transferencia"
+            string referencia_bancaria "Null si es efectivo"
+            datetime fecha_pago
+            string estatus_pago "Pendiente, Liquidado"
+        }
+
+        CONFIG_COTIZADOR {
+            int id_config PK
+            decimal precio_km
+            decimal precio_piso_base
+            decimal sueldo_base_empleado
+            datetime ultima_actualizacion
+        }
+        
+        BITACORA {
+            int id_bitacora PK
+            int id_usuario FK
+            string accion
+            string tabla_afectada
+            datetime fecha_hora
+        }
+
+        %% RELACIONES CORREGIDAS
+        TIPO_USUARIO ||--o{ USUARIOS : "clasifica"
+        USUARIOS ||--|| PERFIL_EMPLEADO : "extiende datos de"
+        DOMICILIO ||--o{ USUARIOS : "residencia de"
+        DOMICILIO ||--o{ VIAJES : "es origen de"
+        DOMICILIO ||--o{ VIAJES : "es destino de"
+        
+        USUARIOS ||--o{ VIAJES : "contrata (cliente)"
+        USUARIOS ||--o{ BITACORA : "registra"
+        
+        VIAJES ||--o{ VIAJE_CAMIONETAS : "asigna"
+        CAMIONETAS ||--o{ VIAJE_CAMIONETAS : "participa en"
+        VIAJES ||--o{ VIAJE_EMPLEADOS : "asigna"
+        PERFIL_EMPLEADO ||--o{ VIAJE_EMPLEADOS : "trabaja en"
+        
+        VIAJES ||--o{ PAGOS : "se liquida con"
+            </pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        
+        // Inicializamos sin auto-arranque
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'neutral',
+            securityLevel: 'loose'
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Forzamos el renderizado asíncrono
+            await mermaid.run({
+                querySelector: '.mermaid'
+            });
+
+            // Una vez que Mermaid dibujó el SVG, lo capturamos
+            const svgElement = document.querySelector('.mermaid svg');
+            
+            if (svgElement) {
+                // Ajustamos dimensiones para que llene el contenedor
+                svgElement.setAttribute('width', '100%');
+                svgElement.setAttribute('height', '100%');
+                // Quitamos el max-width por defecto de mermaid para que el zoom funcione libremente
+                svgElement.style.maxWidth = 'none';
+
+                // Inicializamos la librería de Zoom y Paneo
+                window.panZoom = svgPanZoom(svgElement, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true, // Muestra controles en la esquina inferior derecha
+                    fit: true,
+                    center: true,
+                    minZoom: 0.5,
+                    maxZoom: 10
+                });
+            }
+        });
+    </script>
+    
+    <script>
+        function descargarSVG() {
+            const svgElement = document.querySelector('.mermaid svg');
+            if (svgElement) {
+                if (!svgElement.getAttribute('xmlns')) {
+                    svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                }
+                const svgCode = new XMLSerializer().serializeToString(svgElement);
+                const blob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Diagrama_ER_Mudanzas.svg';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                alert('Por favor espera a que el diagrama termine de cargar.');
+            }
+        }
+
+        function descargarPNG() {
+            const svgElement = document.querySelector('.mermaid svg');
+            if (!svgElement) {
+                alert('Por favor espera a que el diagrama termine de cargar.');
+                return;
+            }
+
+            // Clonamos el SVG para no modificar la vista del usuario
+            const clone = svgElement.cloneNode(true);
+            
+            // Obtenemos las dimensiones reales del diagrama para que no se corte
+            const bbox = svgElement.querySelector('g').getBBox();
+            const width = bbox.width + 100; // padding
+            const height = bbox.height + 100; // padding
+
+            // Limpiamos las transformaciones de zoom/paneo en el clon para exportar la vista completa
+            clone.setAttribute('width', width);
+            clone.setAttribute('height', height);
+            clone.setAttribute('viewBox', `${bbox.x - 50} ${bbox.y - 50} ${width} ${height}`);
+            
+            // Eliminamos los controles de zoom visuales en el PNG
+            const zoomControls = clone.querySelector('#svg-pan-zoom-controls');
+            if(zoomControls) zoomControls.remove();
+
+            if (!clone.getAttribute('xmlns')) {
+                clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            }
+
+            const svgData = new XMLSerializer().serializeToString(clone);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // Le damos fondo blanco al canvas (por defecto es transparente)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const img = new Image();
+            
+            // Codificamos el SVG en Base64 para evitar errores de renderizado en el navegador
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+
+            img.onload = function () {
+                // Dibujamos la imagen en el canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Convertimos el canvas a PNG y forzamos la descarga
+                const a = document.createElement('a');
+                a.download = 'Diagrama_ER_Mudanzas.png';
+                a.href = canvas.toDataURL('image/png');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+        }
+    </script>
+</body>
+
+</html>
