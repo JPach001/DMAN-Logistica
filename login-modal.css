@@ -1,0 +1,270 @@
+.login-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  justify-content: center;
+  align-items: center;
+  animation: loginFadeIn 0.24s ease;
+}
+
+.login-modal-overlay.active {
+  display: flex;
+}
+
+.login-modal-container {
+  background: #ffffff;
+  border-radius: 20px;
+  width: min(90vw, 450px);
+  position: relative;
+  animation: loginSlideIn 0.24s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-confirmation {
+  max-width: 520px;
+}
+
+.login-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.login-modal-close:hover {
+  color: #333;
+}
+
+.login-modal-content {
+  padding: 40px 35px;
+}
+
+.login-modal-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.login-modal-subtitle {
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.login-form-group {
+  margin-bottom: 20px;
+}
+
+.login-form-group label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+}
+
+.login-input-wrapper input {
+  width: 100%;
+  padding: 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-input-wrapper input:focus {
+  outline: none;
+  border-color: #a4d65e;
+  box-shadow: 0 0 0 3px rgba(164, 214, 94, 0.12);
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 5px;
+}
+
+.login-forgot-password {
+  text-align: right;
+  margin-bottom: 20px;
+}
+
+.login-forgot-password a {
+  color: #666;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.login-forgot-password a:hover {
+  color: #a4d65e;
+}
+
+.login-btn-login {
+  width: 100%;
+  background: #a4d65e;
+  color: #333;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-btn-login:hover {
+  background: #92c44f;
+}
+
+.login-remember-me {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.login-remember-me input {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.login-remember-me label {
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 25px 0;
+  color: #999;
+  font-size: 13px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #ddd;
+}
+
+.login-divider span {
+  padding: 0 15px;
+}
+
+.login-btn-google {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.login-btn-google:hover {
+  background: #f5f5f5;
+}
+
+.login-btn-google img {
+  width: 20px;
+  height: 20px;
+}
+
+.login-register-link {
+  text-align: center;
+  margin-top: 25px;
+  font-size: 14px;
+  color: #666;
+}
+
+.login-register-link a {
+  color: #333;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.login-register-link a:hover {
+  color: #a4d65e;
+}
+
+.confirmation-content {
+  text-align: center;
+}
+
+.confirmation-icon {
+  font-size: 80px;
+  color: #d1fe63;
+  margin-bottom: 20px;
+}
+
+.confirmation-text {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.login-modal-open {
+  overflow: hidden;
+}
+
+@keyframes loginFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loginSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-modal-content {
+    padding: 30px 20px;
+  }
+
+  .login-modal-title {
+    font-size: 24px;
+  }
+}
