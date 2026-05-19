@@ -69,18 +69,24 @@
             decimal capacidad_m3
             string estado "Disponible, Mantenimiento, Baja"
         }
-        
+
         VIAJES {
             int id_viaje PK
+            int id_cliente FK
             int id_origen FK
             int id_destino FK
             datetime fecha_hora_inicio
             int duracion_estimada_min
             decimal distancia_km
+            boolean requiere_factura
             boolean anticipo_pagado
             string estado "Cotizado, Confirmado, En curso, Terminado, Cancelado"
-            decimal costo_total
             string descripcion_articulos
+            decimal costo_gasolina
+            decimal costo_casetas
+            decimal costos_adicionales
+            decimal costo_empleados
+            decimal costo_total_real
         }
 
         VIAJE_CAMIONETAS {
@@ -91,7 +97,7 @@
         VIAJE_EMPLEADOS {
             int id_viaje PK, FK
             int id_empleado PK, FK
-            string rol_en_este_viaje "Chofer, Auxiliar"
+            string rol_en_este_viaje "Chofer, Cargador, Ambos"
         }
         
         PAGOS {
@@ -107,8 +113,13 @@
         CONFIG_COTIZADOR {
             int id_config PK
             decimal precio_km
-            decimal precio_piso_base
-            decimal sueldo_base_empleado
+            decimal precio_por_piso
+            decimal precio_por_emplaye
+            decimal precio_volumen_bajo
+            decimal precio_volumen_medio
+            decimal precio_volumen_alto
+            decimal sueldo_base_cargador
+            decimal sueldo_base_chofer
             datetime ultima_actualizacion
         }
         
