@@ -11,7 +11,7 @@ require __DIR__ . '/includes/site-header.php';
         <section class="hero-banner">
             <div class="hero-badge">Cotizacion en linea</div>
             <h1 class="hero-title" style="font-family:'Montserrat',sans-serif;">Calcula el estimado de tu mudanza en minutos.</h1>
-            <p class="hero-text">La calculadora suma distancia, pisos, cargadores, emplaye y volumen para darte una referencia inmediata antes de guardar la solicitud.</p>
+            <p class="hero-text">La calculadora suma distancia, pisos, cargadores, emplaye y volumen para darte una referencia inmediata antes de guardar la solicitud, usando servicios libres y sin costo de licencia.</p>
         </section>
 
         <section class="panel-grid">
@@ -19,7 +19,7 @@ require __DIR__ . '/includes/site-header.php';
                 <h2 class="section-title">Como se calcula</h2>
                 <div class="mini-card">
                     <strong class="d-block mb-1">1. Distancia</strong>
-                    <div class="muted">Se consulta la ruta entre origen y destino.</div>
+                    <div class="muted">Se consulta la ruta entre origen y destino con servicios libres.</div>
                 </div>
                 <div class="mini-card">
                     <strong class="d-block mb-1">2. Carga adicional</strong>
@@ -43,6 +43,7 @@ require __DIR__ . '/includes/site-header.php';
 
                     <button type="button" class="btnVerde" onclick="calcularDistancia()">Calcular distancia</button>
                     <p id="distancia-texto" class="muted" style="margin-top:12px;">Distancia: -- km</p>
+                    <p id="cotizador-status" class="muted" style="margin-top:4px;" aria-live="polite">Escribe las direcciones para empezar.</p>
 
                     <h2 class="section-title" style="margin-top:24px;">Detalles del servicio</h2>
 
