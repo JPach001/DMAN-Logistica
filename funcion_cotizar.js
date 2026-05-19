@@ -1,62 +1,104 @@
-const cotizadorFields = document.querySelectorAll('#cotizador input, #cotizador select');
+const cotizador = document.getElementById('cotizador');
+const origenInput = document.getElementById('origen');
+const destinoInput = document.getElementById('destino');
+const distanciaTexto = document.getElementById('distancia-texto');
+const statusTexto = document.getElementById('cotizador-status');
+const totalTexto = document.getElementById('total');
 
-cotizadorFields.forEach((el) => {
-    el.addEventListener('input', actualizarCotizacion);
-});
+let lastDistanceKm = 0;
+let distanceTimer = null;
+let requestToken = 0;
 
-async function actualizarCotizacion() {
-    const origen = document.getElementById('origen')?.value ?? '';
-    const destino = document.getElementById('destino')?.value ?? '';
-    let km = 0;
+if (cotizador) {
+    cotizador.querySelectorAll('input, select').forEach((el) => {
+        el.addEventListener('input', () => {
+            if (el === origenInput || el === destinoInput) {
+                scheduleDistanceLookup();
+            } else {
+                recalcularTotal();
+            }
+        });
+    });
+}
 
-    if (origen && destino) {
-        const coordOrigen = await geocode(origen);
-        const coordDestino = await geocode(destino);
+function scheduleDistanceLookup() {
+    if (distanceTimer) {
+        window.clearTimeout(distanceTimer);
+    }
+    distanceTimer = window.setTimeout(() => {
+        void calcularDistancia();
+    }, 500);
+}
 
-        if (coordOrigen && coordDestino) {
-            km = await distanciaOSRM(coordOrigen, coordDestino);
-            document.getElementById('distancia-texto').innerText = `Distancia: ${km.toFixed(2)} km`;
-        } else {
-            document.getElementById('distancia-texto').innerText = 'Distancia: -- km';
+async function calcularDistancia() {
+    const origen = origenInput?.value.trim() ?? '';
+    const destino = destinoInput?.value.trim() ?? '';
+
+    if (!origen || !destino) {
+        lastDistanceKm = 0;
+        setDistanceState('Distancia: -- km', 'Escribe origen y destino para calcular la ruta.');
+        recalcularTotal();
+        return;
+    }
+
+    const currentToken = ++requestToken;
+    setDistanceState('Calculando distancia...', 'Consultando la ruta mas adecuada.');
+
+    try {
+        const response = await fetch('api/distancia.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ origen, destino }),
+        });
+
+        const data = await response.json();
+
+        if (currentToken !== requestToken) {
+            return;
         }
-    } else {
-        document.getElementById('distancia-texto').innerText = 'Distancia: -- km';
-    }
 
-    calcularTotal(km);
-}
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'No se pudo calcular la distancia.');
+        }
 
-async function geocode(texto) {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return data[0] || null;
-    } catch (err) {
-        console.error(err);
-        return null;
-    }
-}
+        lastDistanceKm = Number(data.distance_km) || 0;
+        const sourceLabel = data.source ? ` (${data.source})` : '';
+        setDistanceState(`Distancia: ${lastDistanceKm.toFixed(2)} km${sourceLabel}`, data.message || 'Ruta calculada correctamente.');
+        recalcularTotal();
+    } catch (error) {
+        if (currentToken !== requestToken) {
+            return;
+        }
 
-async function distanciaOSRM(coord1, coord2) {
-    try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${coord1.lon},${coord1.lat};${coord2.lon},${coord2.lat}?overview=false`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return (data.routes?.[0]?.distance ?? 0) / 1000;
-    } catch (err) {
-        console.error(err);
-        return 0;
+        console.error(error);
+        lastDistanceKm = 0;
+        setDistanceState(
+            'Distancia: -- km',
+            'No fue posible calcular la ruta. Revisa las direcciones o intenta de nuevo.'
+        );
+        recalcularTotal();
     }
 }
 
-function calcularTotal(km) {
+function setDistanceState(distanceText, statusText) {
+    if (distanciaTexto) {
+        distanciaTexto.innerText = distanceText;
+    }
+    if (statusTexto) {
+        statusTexto.innerText = statusText;
+    }
+}
+
+function recalcularTotal() {
     const costoKm = 15;
     const costoPiso = 50;
     const costoCargador = 200;
     const costoEmplaye = 30;
 
-    let total = km * costoKm;
+    let total = lastDistanceKm * costoKm;
     const pisosOrigen = parseInt(document.getElementById('pisos_origen')?.value, 10) || 0;
     const pisosDestino = parseInt(document.getElementById('pisos_destino')?.value, 10) || 0;
     total += (pisosOrigen + pisosDestino) * costoPiso;
@@ -68,12 +110,10 @@ function calcularTotal(km) {
     else if (volumen === 'medio') total += 900;
     else if (volumen === 'mucho') total += 1800;
 
-    const totalEl = document.getElementById('total');
-    if (totalEl) {
-        totalEl.innerText = `$${total.toFixed(2)} MXN`;
+    if (totalTexto) {
+        totalTexto.innerText = `$${total.toFixed(2)} MXN`;
     }
 }
 
-function calcularDistancia() {
-    actualizarCotizacion();
-}
+window.calcularDistancia = calcularDistancia;
+window.recalcularTotal = recalcularTotal;
