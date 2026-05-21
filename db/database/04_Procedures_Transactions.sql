@@ -66,7 +66,7 @@ BEGIN
 
     -- 1. Actualización (Borrado Lógico) asumiendo que tienes un campo de estado
     UPDATE VIAJES 
-    SET estado_viaje = 'Cancelado' 
+    SET estado = 'Cancelado' 
     WHERE id_viaje = p_id_viaje;
 
     -- 2. Registro de la acción en la Bitácora incluyendo el motivo
