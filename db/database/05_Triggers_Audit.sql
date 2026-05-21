@@ -66,11 +66,11 @@ AFTER UPDATE ON USUARIOS
 FOR EACH ROW
 BEGIN
     -- Cambio de Rol (Ej. un empleado se pone rol de admin)
-    IF OLD.rol != NEW.rol THEN
+    IF OLD.id_tipo_usuario != NEW.id_tipo_usuario THEN
         INSERT INTO BITACORA (id_usuario, accion, tabla_afectada)
         VALUES (
             NEW.id_usuario, 
-            CONCAT('Alerta de Seguridad: El usuario ', NEW.correo, ' cambió de rol de [', OLD.rol, '] a [', NEW.rol, ']'), 
+            CONCAT('Alerta de Seguridad: El usuario ', NEW.correo, ' cambió de rol de [', OLD.id_tipo_usuario, '] a [', NEW.id_tipo_usuario, ']'), 
             'USUARIOS'
         );
     END IF;
