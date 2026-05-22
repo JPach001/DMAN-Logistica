@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $dbHost = getenv('DMAN_DB_HOST') ?: 'localhost';
 $dbUser = getenv('DMAN_DB_USER') ?: 'root';
 $dbPass = getenv('DMAN_DB_PASS') ?: '';
-$dbName = getenv('DMAN_DB_NAME') ?: 'dman_logistica';
+$dbName = getenv('DMAN_DB_NAME') ?: 'logistica_dman';
 
 $conn = @new mysqli($dbHost, $dbUser, $dbPass, $dbName);
 $dbReady = $conn instanceof mysqli && !$conn->connect_error;
