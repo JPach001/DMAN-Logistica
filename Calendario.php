@@ -2,214 +2,332 @@
 require __DIR__ . '/conection.php';
 
 $pageTitle = 'DMAN Logistica | Calendario';
-$pageDescription = 'Consulta disponibilidad del transportista antes de solicitar un servicio.';
+$pageDescription = 'Calendario mensual de disponibilidad y viajes por cliente.';
 $activePage = 'calendario';
 $pageScripts = ['login-modal.js'];
-require __DIR__ . '/includes/site-header.php';
+$bodyClass = 'calendar-page';
 
-$selectedDate = $_GET['fecha'] ?? date('Y-m-d');
-$selectedTransportista = (int) ($_GET['transportista'] ?? 0);
+function dman_calendar_month_name(int $month): string
+{
+    static $months = [
+        1 => 'Enero',
+        2 => 'Febrero',
+        3 => 'Marzo',
+        4 => 'Abril',
+        5 => 'Mayo',
+        6 => 'Junio',
+        7 => 'Julio',
+        8 => 'Agosto',
+        9 => 'Septiembre',
+        10 => 'Octubre',
+        11 => 'Noviembre',
+        12 => 'Diciembre',
+    ];
 
-$sampleTransportistas = [
-    ['id' => 1, 'nombre' => 'Carlos Ramirez', 'unidad' => 'Camioneta 3.5 t', 'turno' => 'Matutino', 'estado' => 'Disponible'],
-    ['id' => 2, 'nombre' => 'Ana Lopez', 'unidad' => 'Camioneta cerrada', 'turno' => 'Vespertino', 'estado' => 'Ocupado'],
-    ['id' => 3, 'nombre' => 'Jorge Morales', 'unidad' => 'Camion de redilas', 'turno' => 'Matutino', 'estado' => 'Disponible'],
-    ['id' => 4, 'nombre' => 'Luis Herrera', 'unidad' => 'Camion de carga', 'turno' => 'Mixto', 'estado' => 'Parcial'],
-];
+    return $months[$month] ?? 'Mes';
+}
 
-$sampleSlots = [
-    1 => [
-        ['hora' => '08:00', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Sin viaje asignado'],
-        ['hora' => '10:00', 'estado' => 'Ocupado', 'servicio' => 'Mudanza residencial', 'detalle' => 'Col. Satelite -> Centro'],
-        ['hora' => '13:00', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Disponible para cotizacion'],
-        ['hora' => '16:00', 'estado' => 'Parcial', 'servicio' => 'Flete local', 'detalle' => 'Regreso estimado 17:30'],
-    ],
-    2 => [
-        ['hora' => '09:00', 'estado' => 'Ocupado', 'servicio' => 'Mudanza de oficina', 'detalle' => 'Reserva confirmada'],
-        ['hora' => '12:00', 'estado' => 'Ocupado', 'servicio' => 'Traslado de muebles', 'detalle' => 'Ruta estatal'],
-        ['hora' => '15:00', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Disponible por la tarde'],
-    ],
-    3 => [
-        ['hora' => '08:30', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Disponible'],
-        ['hora' => '11:30', 'estado' => 'Parcial', 'servicio' => 'Entrega programada', 'detalle' => 'Espacio limitado'],
-        ['hora' => '14:30', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Disponible'],
-    ],
-    4 => [
-        ['hora' => '07:30', 'estado' => 'Ocupado', 'servicio' => 'Flete nacional', 'detalle' => 'Carretera libre'],
-        ['hora' => '13:30', 'estado' => 'Parcial', 'servicio' => 'Retorno', 'detalle' => 'En camino'],
-        ['hora' => '18:00', 'estado' => 'Libre', 'servicio' => '-', 'detalle' => 'Disponible al cierre'],
-    ],
-];
+function dman_calendar_density_class(int $count): string
+{
+    if ($count > 10) {
+        return 'calendar-day--high';
+    }
 
-$transportistas = [];
+    if ($count >= 5) {
+        return 'calendar-day--medium';
+    }
+
+    return 'calendar-day--low';
+}
+
+function dman_calendar_datetime_label(?string $value): string
+{
+    if (!$value) {
+        return 'Sin fecha';
+    }
+
+    $timestamp = strtotime($value);
+    return $timestamp ? date('d/m/Y H:i', $timestamp) : $value;
+}
+
+$today = new DateTimeImmutable('today');
+$currentYear = (int) $today->format('Y');
+$currentMonth = (int) $today->format('n');
+
+$year = isset($_GET['year']) ? (int) $_GET['year'] : $currentYear;
+$month = isset($_GET['month']) ? (int) $_GET['month'] : $currentMonth;
+
+if (!checkdate($month, 1, $year)) {
+    $year = $currentYear;
+    $month = $currentMonth;
+}
+
+$monthStart = DateTimeImmutable::createFromFormat('Y-n-j', $year . '-' . $month . '-1') ?: $today;
+$monthEnd = $monthStart->modify('last day of this month');
+$daysInMonth = (int) $monthStart->format('t');
+$firstWeekday = (int) $monthStart->format('N');
+$prevMonth = $monthStart->modify('-1 month');
+$nextMonth = $monthStart->modify('+1 month');
+
+$dayParam = isset($_GET['day']) ? (int) $_GET['day'] : null;
+$selectedDate = null;
+
+if ($dayParam !== null && checkdate($month, $dayParam, $year)) {
+    $selectedDate = sprintf('%04d-%02d-%02d', $year, $month, $dayParam);
+} elseif ($year === $currentYear && $month === $currentMonth) {
+    $selectedDate = $today->format('Y-m-d');
+}
+
+$isLoggedIn = !empty($_SESSION['id_usuario']);
+$currentUserId = (int) ($_SESSION['id_usuario'] ?? 0);
+
+$tripCounts = [];
+$monthTrips = 0;
+$daysWithTrips = 0;
+$lowDays = 0;
+$mediumDays = 0;
+$highDays = 0;
+
 if (dman_db_ready()) {
-    $transportistas = dman_fetch_all(
-        "SELECT t.id_transportista,
-                CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
-                t.unidad,
-                t.turno,
-                COALESCE(t.estado, 'Disponible') AS estado
-         FROM TRANSPORTISTAS t
-         INNER JOIN USUARIOS u ON t.id_usuario = u.id_usuario
-         ORDER BY u.apellidos, u.nombre"
+    $countRows = dman_fetch_all(
+        'SELECT DATE(fecha_hora_inicio) AS fecha, COUNT(*) AS total
+         FROM VIAJES
+         WHERE fecha_hora_inicio BETWEEN ? AND ?
+         GROUP BY DATE(fecha_hora_inicio)',
+        'ss',
+        [$monthStart->format('Y-m-d 00:00:00'), $monthEnd->format('Y-m-d 23:59:59')]
+    );
+
+    foreach ($countRows as $row) {
+        $date = (string) ($row['fecha'] ?? '');
+        $count = (int) ($row['total'] ?? 0);
+        if ($date === '') {
+            continue;
+        }
+
+        $tripCounts[$date] = $count;
+        $monthTrips += $count;
+        $daysWithTrips++;
+
+        if ($count > 10) {
+            $highDays++;
+        } elseif ($count >= 5) {
+            $mediumDays++;
+        } else {
+            $lowDays++;
+        }
+    }
+}
+
+$selectedTrips = [];
+if ($isLoggedIn && $selectedDate && dman_db_ready()) {
+    $selectedTrips = dman_fetch_all(
+        'SELECT
+            v.id_viaje,
+            v.origen,
+            v.destino,
+            v.fecha_hora_inicio,
+            v.estado,
+            v.volumen_articulos,
+            v.distancia_km,
+            v.costo_total_estimado,
+            COALESCE((
+                SELECT GROUP_CONCAT(DISTINCT CONCAT(eu.nombre, " ", eu.apellidos, " (", ve.rol_en_este_viaje, ")") ORDER BY eu.apellidos SEPARATOR " · ")
+                FROM VIAJE_EMPLEADOS ve
+                INNER JOIN PERFIL_EMPLEADO pe ON ve.id_empleado = pe.id_usuario
+                INNER JOIN USUARIOS eu ON pe.id_usuario = eu.id_usuario
+                WHERE ve.id_viaje = v.id_viaje
+            ), "Sin conductor asignado") AS conductores,
+            COALESCE((
+                SELECT GROUP_CONCAT(DISTINCT CONCAT(c.marca, " ", c.modelo, " / ", c.placa) ORDER BY c.marca SEPARATOR " · ")
+                FROM VIAJE_CAMIONETAS vc
+                INNER JOIN CAMIONETAS c ON vc.id_camioneta = c.id_camioneta
+                WHERE vc.id_viaje = v.id_viaje
+            ), "Sin camioneta asignada") AS camionetas
+         FROM VIAJES v
+         WHERE v.id_cliente = ? AND DATE(v.fecha_hora_inicio) = ?
+         ORDER BY v.fecha_hora_inicio ASC',
+        'is',
+        [$currentUserId, $selectedDate]
     );
 }
 
-if (!$transportistas) {
-    $transportistas = $sampleTransportistas;
-}
-
-if ($selectedTransportista <= 0) {
-    $selectedTransportista = (int) ($transportistas[0]['id_transportista'] ?? $transportistas[0]['id'] ?? 0);
-}
-
-$selectedProfile = null;
-foreach ($transportistas as $item) {
-    $itemId = (int) ($item['id_transportista'] ?? $item['id'] ?? 0);
-    if ($itemId === $selectedTransportista) {
-        $selectedProfile = $item;
-        break;
-    }
-}
-
-if (!$selectedProfile) {
-    $selectedProfile = $transportistas[0] ?? null;
-}
-
-$selectedSlots = $sampleSlots[$selectedTransportista] ?? [];
-$busyCount = 0;
-$freeCount = 0;
-foreach ($selectedSlots as $slot) {
-    $state = $slot['estado'] ?? '';
-    if ($state === 'Libre') {
-        $freeCount++;
-    } else {
-        $busyCount++;
-    }
-}
-
-$availableTransportistas = 0;
-foreach ($transportistas as $item) {
-    $state = strtolower((string) ($item['estado'] ?? ''));
-    if ($state === 'disponible' || $state === 'libre') {
-        $availableTransportistas++;
-    }
-}
-
+require __DIR__ . '/includes/site-header.php';
 ?>
 
 <main class="page-single">
-    <div class="calendar-grid">
-        <section class="calendar-hero">
-            <div class="hero-badge">Calendario de disponibilidad</div>
-            <h1 class="hero-title" style="font-family:'Montserrat',sans-serif;">Revisa si el transportista esta libre antes de solicitar tu servicio.</h1>
-            <p class="hero-text">
-                Esta vista funciona como la agenda de disponibilidad que hicieron en el proyecto clinico: eliges fecha,
-                seleccionas transportista y visualizas sus espacios ocupados o libres para mudanza o flete.
-            </p>
-        </section>
-
-        <section class="stats-grid">
-            <div class="stat-card accent-green">
-                <div class="stat-label">Transportistas</div>
-                <div class="stat-value"><?php echo count($transportistas); ?></div>
-                <div class="stat-note">Registro visible en esta vista</div>
+    <section class="calendar-hero">
+        <div class="hero-badge">Vista 1 / Clientes</div>
+        <h1 class="hero-title">Calendario mensual de viajes</h1>
+        <p class="hero-text">
+            Verde: menos de 5 viajes. Amarillo: de 5 a 10. Rojo: más de 10.
+            Los domingos quedan cerrados.
+        </p>
+        <div class="calendar-hero-stats">
+            <div class="calendar-hero-stat">
+                <span>Viajes del mes</span>
+                <strong><?php echo (int) $monthTrips; ?></strong>
             </div>
-            <div class="stat-card accent-blue">
-                <div class="stat-label">Disponibles</div>
-                <div class="stat-value"><?php echo $availableTransportistas; ?></div>
-                <div class="stat-note">Transportistas listos para asignar</div>
+            <div class="calendar-hero-stat">
+                <span>Días con viajes</span>
+                <strong><?php echo (int) $daysWithTrips; ?></strong>
             </div>
-            <div class="stat-card accent-sand">
-                <div class="stat-label">Turnos del dia</div>
-                <div class="stat-value"><?php echo count($selectedSlots); ?></div>
-                <div class="stat-note">Agenda del transportista seleccionado</div>
+            <div class="calendar-hero-stat">
+                <span>Mes</span>
+                <strong><?php echo htmlspecialchars(dman_calendar_month_name($month) . ' ' . $year); ?></strong>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="panel-grid">
-            <aside class="availability-panel">
-                <form method="get">
-                    <div>
-                        <label for="fecha">Fecha</label>
-                        <input type="date" id="fecha" name="fecha" value="<?php echo htmlspecialchars($selectedDate); ?>">
-                    </div>
+    <section class="calendar-layout">
+        <article class="calendar-board page-card">
+            <div class="calendar-toolbar">
+                <div>
+                    <p class="calendar-kicker">Calendario general</p>
+                    <h2 class="section-title"><?php echo htmlspecialchars(dman_calendar_month_name($month) . ' ' . $year); ?></h2>
+                </div>
 
-                    <div>
-                        <label for="transportista">Transportista</label>
-                        <select id="transportista" name="transportista">
-                            <?php foreach ($transportistas as $transportista): ?>
-                                <?php $itemId = (int) ($transportista['id_transportista'] ?? $transportista['id'] ?? 0); ?>
-                                <option value="<?php echo $itemId; ?>" <?php echo $itemId === $selectedTransportista ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(($transportista['nombre'] ?? 'Sin nombre') . ' - ' . ($transportista['unidad'] ?? 'Unidad')); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="calendar-nav">
+                    <a class="btnVerde" href="Calendario.php?year=<?php echo (int) $prevMonth->format('Y'); ?>&month=<?php echo (int) $prevMonth->format('n'); ?>">
+                        Mes anterior
+                    </a>
+                    <a class="btnVerde" href="Calendario.php?year=<?php echo (int) $nextMonth->format('Y'); ?>&month=<?php echo (int) $nextMonth->format('n'); ?>">
+                        Mes siguiente
+                    </a>
+                </div>
+            </div>
 
-                    <button class="btnVerde" type="submit" style="width:100%;">Ver disponibilidad</button>
-                </form>
+            <div class="calendar-legend">
+                <span class="chip chip-green">0-4 viajes</span>
+                <span class="chip chip-amber">5-10 viajes</span>
+                <span class="chip chip-red">+10 viajes</span>
+                <span class="chip chip-sand">Domingo cerrado</span>
+            </div>
 
-                <?php if ($selectedProfile): ?>
-                    <div class="mini-card">
-                        <strong class="d-block mb-1"><?php echo htmlspecialchars((string) ($selectedProfile['nombre'] ?? 'Transportista')); ?></strong>
-                        <div class="muted"><?php echo htmlspecialchars((string) ($selectedProfile['unidad'] ?? 'Unidad')); ?></div>
-                        <div style="margin-top:10px;">
-                            <span class="chip chip-sand"><?php echo htmlspecialchars((string) ($selectedProfile['turno'] ?? 'Sin turno')); ?></span>
-                            <span class="chip chip-green" style="margin-left:6px;"><?php echo htmlspecialchars((string) ($selectedProfile['estado'] ?? 'Disponible')); ?></span>
+            <div class="calendar-weekdays" aria-hidden="true">
+                <span>Lun</span>
+                <span>Mar</span>
+                <span>Mié</span>
+                <span>Jue</span>
+                <span>Vie</span>
+                <span>Sáb</span>
+                <span>Dom</span>
+            </div>
+
+            <div class="calendar-grid-days">
+                <?php for ($i = 1; $i < $firstWeekday; $i++): ?>
+                    <div class="calendar-day calendar-day--empty" aria-hidden="true"></div>
+                <?php endfor; ?>
+
+                <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
+                    <?php
+                    $dateValue = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                    $weekday = (int) date('N', strtotime($dateValue));
+                    $count = (int) ($tripCounts[$dateValue] ?? 0);
+                    $selected = $selectedDate === $dateValue;
+                    $classes = ['calendar-day'];
+                    $label = 'No hay viajes';
+                    $clickHref = '#';
+                    $clickAttrs = '';
+
+                    if ($weekday === 7) {
+                        $classes[] = 'calendar-day--rest';
+                        $label = 'Descanso';
+                    } else {
+                        $classes[] = dman_calendar_density_class($count);
+                        $label = $count === 1 ? '1 viaje' : $count . ' viajes';
+                        if ($isLoggedIn) {
+                            $clickHref = 'Calendario.php?year=' . (int) $year . '&month=' . (int) $month . '&day=' . (int) $day;
+                        } else {
+                            $clickHref = '#loginModal';
+                            $clickAttrs = ' onclick="openLoginModal(); return false;"';
+                        }
+                    }
+
+                    if ($selected) {
+                        $classes[] = 'calendar-day--selected';
+                    }
+                    ?>
+
+                    <?php if ($weekday === 7): ?>
+                        <div class="<?php echo htmlspecialchars(implode(' ', $classes)); ?>">
+                            <span class="calendar-day__number"><?php echo (int) $day; ?></span>
+                            <span class="calendar-day__label"><?php echo htmlspecialchars($label); ?></span>
                         </div>
+                    <?php else: ?>
+                        <a class="<?php echo htmlspecialchars(implode(' ', $classes)); ?>" href="<?php echo htmlspecialchars($clickHref); ?>"<?php echo $clickAttrs; ?> aria-label="Ver <?php echo htmlspecialchars($day . ' de ' . dman_calendar_month_name($month) . ' de ' . $year); ?>">
+                            <span class="calendar-day__number"><?php echo (int) $day; ?></span>
+                            <span class="calendar-day__label"><?php echo htmlspecialchars($label); ?></span>
+                            <span class="calendar-day__meta"><?php echo (int) $count; ?></span>
+                        </a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+            </div>
+        </article>
+
+        <aside class="calendar-side">
+            <div class="page-card calendar-detail-card">
+                <?php if ($isLoggedIn): ?>
+                    <div class="calendar-detail-head">
+                        <div>
+                            <p class="calendar-kicker">Mis viajes</p>
+                            <h3 class="section-title">
+                                <?php echo $selectedDate ? htmlspecialchars(dman_calendar_datetime_label($selectedDate . ' 00:00:00')) : 'Selecciona un día'; ?>
+                            </h3>
+                        </div>
+                        <span class="chip chip-blue"><?php echo count($selectedTrips); ?> viaje(s)</span>
+                    </div>
+
+                    <p class="muted">
+                        Solo ves tus propios viajes. También aparecen los cotizados.
+                    </p>
+
+                    <?php if ($selectedDate && $selectedTrips): ?>
+                        <div class="calendar-trips-list">
+                            <?php foreach ($selectedTrips as $trip): ?>
+                                <article class="calendar-trip">
+                                    <div class="calendar-trip__top">
+                                        <strong>Viaje #<?php echo (int) $trip['id_viaje']; ?></strong>
+                                        <span class="chip <?php echo htmlspecialchars($trip['estado'] === 'Cotizado' ? 'chip-sand' : ($trip['estado'] === 'Confirmado' ? 'chip-green' : 'chip-amber')); ?>">
+                                            <?php echo htmlspecialchars((string) $trip['estado']); ?>
+                                        </span>
+                                    </div>
+
+                                    <div class="calendar-trip__info">
+                                        <div><span>Origen</span><strong><?php echo htmlspecialchars((string) $trip['origen']); ?></strong></div>
+                                        <div><span>Destino</span><strong><?php echo htmlspecialchars((string) $trip['destino']); ?></strong></div>
+                                        <div><span>Inicio</span><strong><?php echo htmlspecialchars(dman_calendar_datetime_label((string) $trip['fecha_hora_inicio'])); ?></strong></div>
+                                        <div><span>Distancia</span><strong><?php echo number_format((float) $trip['distancia_km'], 2); ?> km</strong></div>
+                                        <div><span>Volumen</span><strong><?php echo htmlspecialchars((string) $trip['volumen_articulos']); ?></strong></div>
+                                        <div><span>Costo</span><strong>$<?php echo number_format((float) $trip['costo_total_estimado'], 2); ?></strong></div>
+                                        <div><span>Conductor</span><strong><?php echo htmlspecialchars((string) $trip['conductores']); ?></strong></div>
+                                        <div><span>Camioneta</span><strong><?php echo htmlspecialchars((string) $trip['camionetas']); ?></strong></div>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php elseif ($selectedDate): ?>
+                        <div class="calendar-empty">
+                            No tienes viajes para esta fecha.
+                        </div>
+                    <?php else: ?>
+                        <div class="calendar-empty">
+                            Elige un día para ver tus viajes.
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="calendar-login-box">
+                        <p class="calendar-kicker">Acceso cliente</p>
+                        <h3 class="section-title">Inicia sesión para ver tus viajes</h3>
+                        <p class="muted">
+                            Si tocas cualquier día, te mandamos al login para registrar o entrar a tu cuenta.
+                        </p>
+                        <button class="btnVerde" type="button" onclick="openLoginModal();">Iniciar sesión</button>
                     </div>
                 <?php endif; ?>
-
-                <div class="mini-card">
-                    <strong class="d-block mb-2">Leyenda</strong>
-                    <div class="legend">
-                        <span class="chip chip-green">Libre</span>
-                        <span class="chip chip-amber">Ocupado</span>
-                        <span class="chip chip-blue">Parcial</span>
-                    </div>
-                </div>
-            </aside>
-
-            <section class="page-card">
-                <h2 class="section-title" style="margin-bottom:6px; font-family:'Montserrat',sans-serif;">Agenda del dia</h2>
-                <p class="muted" style="margin-bottom:18px;">El siguiente bloque resume la disponibilidad del transportista seleccionado para la fecha elegida.</p>
-
-                <div class="timeline">
-                    <?php if ($selectedSlots): ?>
-                        <?php foreach ($selectedSlots as $slot): ?>
-                            <?php
-                            $state = (string) ($slot['estado'] ?? 'Libre');
-                            $rowClass = 'free';
-                            if ($state === 'Ocupado') {
-                                $rowClass = 'busy';
-                            } elseif ($state === 'Parcial') {
-                                $rowClass = 'partial';
-                            }
-                            ?>
-                            <div class="time-row <?php echo $rowClass; ?>">
-                                <div class="slot-label"><?php echo htmlspecialchars((string) ($slot['hora'] ?? '')); ?></div>
-                                <div>
-                                    <strong><?php echo htmlspecialchars((string) ($slot['servicio'] ?? '-')); ?></strong>
-                                    <div class="muted"><?php echo htmlspecialchars((string) ($slot['detalle'] ?? '')); ?></div>
-                                </div>
-                                <div class="chip <?php echo $state === 'Libre' ? 'chip-green' : ($state === 'Parcial' ? 'chip-blue' : 'chip-amber'); ?>">
-                                    <?php echo htmlspecialchars($state); ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="mini-card">No hay registros para esta fecha.</div>
-                    <?php endif; ?>
-                </div>
-
-                <div class="cta-strip">
-                    <a class="btnCotizar" href="formulario_cotizar.php">Solicitar cotizacion</a>
-                    <a class="btnVerde" href="Contacto.php">Hablar con soporte</a>
-                </div>
-            </section>
-        </section>
-    </div>
+            </div>
+        </aside>
+    </section>
 </main>
 
 <?php require __DIR__ . '/includes/site-login-modal.php'; ?>
